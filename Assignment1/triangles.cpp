@@ -44,9 +44,7 @@ for (float i = -1; i < 1; i += 0.02) {
 	Triangle(i, 0.84, i + 0.04, 0.84, i + 0.02, 0.75, 0, 1, 0);
 }
 
-// TODO flowers, sun, clouds, rainbow
-
-// Arc
+// Rainbow
 const float startingAngle = 2.8;
 const float endingAngle = 1;
 const float centerX = -0.2, const centerY = 0.2;
@@ -117,3 +115,21 @@ for (float a = startingAngle, r = initialRadius, R = r + thickness; a > endingAn
 		centerX + (cos(a + step) * (r + thickness * n) * deformX), centerY - (sin(a + step) * (r + thickness * n) * deformY),
 		1, 0, 0);
 }
+
+// Sun
+const float sunX = 0.7, const sunY = -0.7;
+const float sunRadius = 0.15;
+const int details = 100;
+
+for (int i = 0; i < details; ++i) {
+	Triangle(sunX, sunY,
+		sunX + cos((float(i) / details) * 6.28) * sunRadius, sunY + sin((float(i) / details) * 6.28) * sunRadius,
+		sunX + cos((float(i + 1) / details) * 6.28) * sunRadius, sunY + sin((float(i + 1) / details) * 6.28) * sunRadius,
+		1, 0.6, 0);
+}
+
+/*const float numberOfRays = 10;
+const float sunRaysSpace = 0.1;
+for (int i = 0; i < numberOfRays; ++i) {
+	Triangle(sunX + cos((float(i) / details) * 6.28) * (sunRadius + sunRaysSpace), sunY + sin((float(i) / details) * 6.28) * (sunRadius + sunRaysSpace), )
+}*/
