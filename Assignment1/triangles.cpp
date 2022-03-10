@@ -128,8 +128,13 @@ for (int i = 0; i < details; ++i) {
 		1, 0.6, 0);
 }
 
-/*const float numberOfRays = 10;
-const float sunRaysSpace = 0.1;
+const float numberOfRays = 30;
+const float sunRaysSpace = 0;
+const float rayLength = 0.1;
+
 for (int i = 0; i < numberOfRays; ++i) {
-	Triangle(sunX + cos((float(i) / details) * 6.28) * (sunRadius + sunRaysSpace), sunY + sin((float(i) / details) * 6.28) * (sunRadius + sunRaysSpace), )
-}*/
+	Triangle(sunX + cos((float(i) / numberOfRays) * 6.28) * (sunRadius + sunRaysSpace), sunY + sin((float(i) / numberOfRays) * 6.28) * (sunRadius + sunRaysSpace),
+		sunX + cos((float(i+1) / numberOfRays) * 6.28) * (sunRadius + sunRaysSpace), sunY + sin((float(i+1) / numberOfRays) * 6.28) * (sunRadius + sunRaysSpace),
+		sunX + cos(((i + 0.5) / numberOfRays) * 6.28) * (sunRadius + sunRaysSpace + rayLength), sunY + sin(((i + 0.5) / numberOfRays) * 6.28) * (sunRadius + sunRaysSpace + rayLength), 
+		1, 0.6, 0);
+}
