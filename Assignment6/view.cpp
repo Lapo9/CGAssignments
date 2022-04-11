@@ -16,7 +16,7 @@ glm::mat4 LookInDirMat(glm::vec3 Pos, glm::vec3 Angs) {
  // aim    -> Posizion of the target (a)
  // Roll   -> roll (rho)
 glm::mat4 LookAtMat(glm::vec3 Pos, glm::vec3 aim, float Roll) {
-	return glm::lookAt(Pos, aim, glm::vec3(0.0f, 1.0f, 0.0f));
+	return glm::lookAt(Pos, aim, glm::vec3(-glm::sin(Roll), glm::cos(Roll), 0.0f));
 }
 
 
