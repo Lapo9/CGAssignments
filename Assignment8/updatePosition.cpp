@@ -37,7 +37,6 @@ glm::mat4 getRobotWorldMatrix(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_R) && lastTime > runCooldown) {
 		speed = speed == 1.0f ? 3.0f : 1.0f;
 		runCooldown = lastTime + 200ms;
-		std::cout << speed << std::endl;
 	}
 
 	return
