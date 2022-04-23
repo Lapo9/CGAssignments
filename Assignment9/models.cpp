@@ -269,19 +269,19 @@ std::pair<std::vector<float>, std::vector<uint32_t>> makeSpring(int precision, i
 // in global variables M1_vertices and M1_indices to M4_vertices and M4_indices
 void makeModels() {
 	//// M1 : Cube
-	auto cubeData = makeCube();
+	auto cubeData = makeCube(0.5f);
 	M1_vertices = cubeData.first;
 	M1_indices = cubeData.second;
 
 
 	//// M2 : Cylinder
-	auto cilinderData = makeCilinder(300);
+	auto cilinderData = makeCilinder(300, 0.5f, 1.0f);
 	M2_vertices = cilinderData.first;
 	M2_indices = cilinderData.second;
 
 
 	//// M3 : Sphere
-	auto sphereData = makeSphere(200);
+	auto sphereData = makeSphere(200, 0.5f);
 	M3_vertices = sphereData.first;
 	M3_indices = sphereData.second;
 
