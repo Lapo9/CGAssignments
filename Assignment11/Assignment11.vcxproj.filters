@@ -15,11 +15,17 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Assignment10.cpp">
+    <ClCompile Include="Assignment11.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\Shader.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\Shader.vert">
+      <Filter>Resource Files</Filter>
+    </None>
     <None Include="compile_shaders.bat">
       <Filter>Resource Files</Filter>
     </None>
