@@ -87,10 +87,10 @@ std::pair<std::vector<float>, std::vector<uint32_t>> makeCube(float side = 1.0f)
 	return std::pair(vertices, indices);
 }
 
-std::pair<std::vector<float>, std::vector<uint32_t>> makeCilinder(int precision, float radius = 1.0f, float heigth = 2.0f) {
+std::pair<std::vector<float>, std::vector<uint32_t>> makeCilinder(int precision, float radius = 1.0f, float height = 2.0f) {
 	const float unitAngle = (glm::pi<float>() * 2) / precision; // angle of each "slice" of the top and bottom face
 	float r = radius; // radius
-	float h = heigth; // heigth
+	float h = height; // height
 
 	auto vertices = std::vector<float>(precision * 2 * 3);
 	for (int i = 0; i < precision; ++i) {
@@ -203,30 +203,30 @@ std::pair<std::vector<float>, std::vector<uint32_t>> makeSphere(int precision, f
 	return std::pair(vertices, indices);
 }
 
-std::pair<std::vector<float>, std::vector<uint32_t>> makeSpring(int precision, int spires, float heigth = 5.0f, float internalRadius = 0.1f, float mainRadius = 1.0f) {
+std::pair<std::vector<float>, std::vector<uint32_t>> makeSpring(int precision, int spires, float height = 5.0f, float internalRadius = 0.1f, float mainRadius = 1.0f) {
 	const float mR = mainRadius;
 	const float r = internalRadius;
 	const float unitAngle = (glm::pi<float>() * 2) / precision;
-	const float unitHeigth = heigth / (spires * precision);
+	const float unitheight = height / (spires * precision);
 
 	auto vertices = std::vector<float>(precision * spires * precision * 3);
 
 	for (int i = 0; i < precision; ++i) {
-		// Compute the radius and heigth of the first point of each one of the spirals which, when combined, create the spring
+		// Compute the radius and height of the first point of each one of the spirals which, when combined, create the spring
 		float h = r * glm::sin(i * unitAngle);
 		float R = mR - r * glm::cos(i * unitAngle);
 
 		// Create the spiral
 		for (int j = 0, const base = i * precision * spires; j < precision * spires; ++j) {
 			vertices[(base + j) * 3 + 0] = R * glm::cos(j * unitAngle);
-			vertices[(base + j) * 3 + 1] = h + j * unitHeigth;
+			vertices[(base + j) * 3 + 1] = h + j * unitheight;
 			vertices[(base + j) * 3 + 2] = R * glm::sin(j * unitAngle);
 		}
 	}
 
 	// Add center vertices in order to "close" the spring
 	vertices.push_back(mR); vertices.push_back(0); vertices.push_back(0);
-	vertices.push_back(mR * glm::cos(unitAngle * (precision-1))); vertices.push_back(heigth - unitHeigth); vertices.push_back(mR * glm::sin(unitAngle * (precision - 1)));
+	vertices.push_back(mR * glm::cos(unitAngle * (precision-1))); vertices.push_back(height - unitheight); vertices.push_back(mR * glm::sin(unitAngle * (precision - 1)));
 
 
 	auto indices = std::vector<uint32_t>((precision * 2 * (precision * spires - 1)) * 3);
