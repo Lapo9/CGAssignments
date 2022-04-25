@@ -25,14 +25,16 @@ public:
     }
 
 private:
-	// place all the application variables here. As an example, here the one for the GLFW Window
-	// and the Vulkan instances are already defined.
-	
-    GLFWwindow* window;
-    VkInstance instance;
-    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    VkDevice device;
-    VkQueue graphicsQueue;
+
+    GLFWwindow* window; // pointer to the OS window where we'll draw
+    VkInstance instance; // Vulkan instance
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE; // the GPU we'll use to draw
+    VkDevice device; // the virtual device which abstracts the GPU so that we can interface with her
+    VkQueue graphicsQueue; // the queue where the graphics command will be executed
+    VkQueue presentQueue; // the queue where the presentation commands will be executed
+    VkSurfaceKHR surface; // the Vulkan surface on the window where we'll actually draw
+    VkCommandPool commandPool; // object to manage the memory where to store the command buffers
+    VkCommandBuffer commandBuffer; // object which holds a series of commands that will be executed by the GPU
 
     void initWindow() {
         glfwInit();
@@ -45,15 +47,12 @@ private:
 
     void initVulkan() {
 		createInstance();
+        createSurface();
         listAvailableExtensions();
         pickPhysicalDevice();
         createLogicalDevice();
-		// Continue with:
-		// Prsentation Surface Creation
-		// Physical Device selection
-		// Logical Device creation
-		// Command Pool creation
-		// Command Buffer creation
+        createCommandPool();
+        createCommandBuffer();
     }
     
 	void initApp() {
@@ -67,7 +66,9 @@ private:
     }
 
     void cleanup() {
+        vkDestroyCommandPool(device, commandPool, nullptr);
         vkDestroyDevice(device, nullptr);
+        vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyInstance(instance, nullptr);
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -86,6 +87,7 @@ private:
         }
     }
 
+    // Creates the Vulkan instance
     void createInstance() {
         VkApplicationInfo appInfo{}; // info about the application
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -131,6 +133,7 @@ private:
         }
     }
 
+    // Checks if the argument device is suitable for our needs (has a graphic queue and a presentation queue)
     bool isDeviceSuitable(VkPhysicalDevice device) {
         VkPhysicalDeviceProperties deviceProperties;
         vkGetPhysicalDeviceProperties(device, &deviceProperties); // get base properties
@@ -142,14 +145,17 @@ private:
         return indices.isComplete();
     }
 
+    // Struct which tells us if a GPU has both the graphic and presentation queues
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
 
         bool isComplete() {
-            return graphicsFamily.has_value();
+            return graphicsFamily.has_value() && presentFamily.has_value();
         }
     };
 
+    // Checks if the argument device has both the graphic and presentation queues
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
         QueueFamilyIndices indices;
 
@@ -160,38 +166,90 @@ private:
 
         int i = 0;
         for (const auto& queueFamily : queueFamilies) {
+            // Check for graphic queue
             if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 indices.graphicsFamily = i;
             }
+
+            // Check for present queue
+            VkBool32 presentSupport = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+            if (presentSupport) {
+                indices.presentFamily = i;
+            }
+
             i++;
         }
 
         return indices;
     }
 
+    // Creates the virtual device we use to interface with the selected GPU
     void createLogicalDevice() {
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice); // number of queues for each queue family
-        VkDeviceQueueCreateInfo queueCreateInfo{};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
-        queueCreateInfo.queueCount = 1;
+        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos; // info to create the queues
+        std::vector<uint32_t> queueFamilyIndices = { indices.graphicsFamily.value(), indices.presentFamily.value()};
         float queuePriority = 1.0f;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
+        // For each queue create the struct used to create it
+        for (const auto& queueFamily : queueFamilyIndices) {
+            VkDeviceQueueCreateInfo queueCreateInfo{};
+            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo.queueFamilyIndex = queueFamily;
+            queueCreateInfo.queueCount = 1;
+            queueCreateInfo.pQueuePriorities = &queuePriority;
+            queueCreateInfos.push_back(queueCreateInfo);
+        }
 
 
         VkPhysicalDeviceFeatures deviceFeatures{}; // advanced features we need (nothing at the moment)
 
         VkDeviceCreateInfo createInfo{}; // info to create the virtual device used to interface with the physical device
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        createInfo.pQueueCreateInfos = &queueCreateInfo;
-        createInfo.queueCreateInfoCount = 1;
+        createInfo.queueCreateInfoCount = queueCreateInfos.size();
+        createInfo.pQueueCreateInfos = queueCreateInfos.data();
         createInfo.pEnabledFeatures = &deviceFeatures;
 
         if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create logical device!");
         }
 
-        vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue); // get an handle to the queues
+        vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue); // get an handle to the graphic queue
+        vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue); // get an handle to the present queue
+
+    }
+
+    // Creates the surface where to draw on the OS window
+    void createSurface() {
+        if (glfwCreateWindowSurface(instance, window, nullptr, &surface)) {
+            throw std::runtime_error("Failed to create window surface!");
+        }
+    }
+
+    // Creates the command pool, used to store command buffers
+    void createCommandPool() {
+        QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+
+        VkCommandPoolCreateInfo poolInfo{}; // info to create the command pool
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+
+        if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create command pool!");
+        }
+    }
+
+    // Creates a command buffer, used to store commands to send to the GPU's queues
+    void createCommandBuffer() {
+        VkCommandBufferAllocateInfo allocInfo{}; // info to create the command buffer
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool = commandPool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+
+        if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to allocate command buffers!");
+        }
     }
 };
 
