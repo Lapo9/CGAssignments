@@ -21,6 +21,10 @@
   <ItemGroup>
     <ClCompile Include="Assignment15.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="compile_shaders.bat" />
+    <None Include="shaders\PhongShader.frag" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

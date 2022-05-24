@@ -1,4 +1,5 @@
-#version 450#extension GL_ARB_separate_shader_objects : enable
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
 
 layout(location = 0) in vec3 fragPos;
 layout(location = 1) in vec3 fragNorm;
@@ -24,32 +25,49 @@ layout(binding = 2) uniform GlobalUniformBufferObject {
 
 vec3 direct_light_dir(vec3 pos) {
 	// Directional light direction
-	return vec3(0.0f, 0.0f, 1.0f);
+	return gubo.lightDir;
 }
 
 vec3 direct_light_color(vec3 pos) {
 	// Directional light color
-	return vec3(0.5f, 1.0f, 0.5f);
+	return gubo.lightColor;
 }
 
 vec3 point_light_dir(vec3 pos) {
 	// Point light direction
-	return vec3(0.0f, 0.0f, 1.0f);
+	return normalize(gubo.lightPos - pos);
 }
 
 vec3 point_light_color(vec3 pos) {
 	// Point light color
-	return vec3(0.5f, 1.0f, 0.5f);
+	float g = gubo.coneInOutDecayExp.z;
+	float beta = gubo.coneInOutDecayExp.w;
+	vec3 p = gubo.lightPos;
+	vec3 color = gubo.lightColor;
+
+	return color * pow(g / length(p - pos), beta);
 }
 
 vec3 spot_light_dir(vec3 pos) {
 	// Spot light direction
-	return vec3(0.0f, 0.0f, 1.0f);
+	return normalize(gubo.lightPos - pos);
 }
 
 vec3 spot_light_color(vec3 pos) {
 	// Spot light color
-	return vec3(0.5f, 1.0f, 0.5f);
+	float g = gubo.coneInOutDecayExp.z; // base distance (where the light has the nominal power)
+	float beta = gubo.coneInOutDecayExp.w; // distance decay factor
+	vec3 p = gubo.lightPos; // position of the light
+	vec3 color = gubo.lightColor; // color of the light
+	vec3 d = gubo.lightDir; // direction of the light
+	float inCone = gubo.coneInOutDecayExp.y; // inner cone (where light is at full power)
+	float outCone = gubo.coneInOutDecayExp.x; // outer cone (where light decays)
+
+	float cosine = dot(normalize(p - pos), d);
+	vec3 pointLightFactor = color * pow(g / length(p - pos), beta);
+	float clampingFactor = clamp((cosine - outCone) / (inCone - outCone), 0.0f, 1.0f);
+
+	return pointLightFactor * clampingFactor;
 }
 
 /**** To from here *****/
