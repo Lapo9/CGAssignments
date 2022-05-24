@@ -11,6 +11,7 @@
 #include <vector>
 #include <optional>
 #include <set>
+#include <algorithm>
 
 const uint32_t WIDTH = 640;
 const uint32_t HEIGHT = 480;
@@ -36,7 +37,31 @@ private:
     VkSurfaceKHR surface; // the Vulkan surface on the window where we'll actually draw
     VkCommandPool commandPool; // object to manage the memory where to store the command buffers
     VkCommandBuffer commandBuffer; // object which holds a series of commands that will be executed by the GPU
+    VkSwapchainKHR swapChain; // the swap chain
+    std::vector<VkImage> swapChainImages; // list of images contained in the swap chain
+    VkFormat swapChainImageFormat; // information about the format of the images in the swap chain
+    VkExtent2D swapChainExtent; // information about the resolution of the images in the swap chain
     const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; // list of device extensions we want to use
+
+
+    // Struct which tells us if a GPU has both the graphic and presentation queues
+    struct QueueFamilyIndices {
+        std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
+
+        bool isComplete() {
+            return graphicsFamily.has_value() && presentFamily.has_value();
+        }
+    };
+
+    // Struct to hold the properies we want our spaw chain to have
+    struct SwapChainSupportDetails {
+        VkSurfaceCapabilitiesKHR capabilities;
+        std::vector < VkSurfaceFormatKHR> formats;
+        std::vector<VkPresentModeKHR> presentModes;
+    };
+
+
 
     void initWindow() {
         glfwInit();
@@ -44,7 +69,7 @@ private:
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // sets the window as a Vulkan window
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // window not resizable
 
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Assignment 12", nullptr, nullptr); // creates the window
+        window = glfwCreateWindow(WIDTH, HEIGHT, "Assignment 14", nullptr, nullptr); // creates the window
     }
 
     void initVulkan() {
@@ -53,6 +78,7 @@ private:
         listAvailableExtensions();
         pickPhysicalDevice();
         createLogicalDevice();
+        createSwapChain();
         createCommandPool();
         createCommandBuffer();
     }
@@ -69,6 +95,7 @@ private:
 
     void cleanup() {
         vkDestroyCommandPool(device, commandPool, nullptr);
+        vkDestroySwapchainKHR(device, swapChain, nullptr);
         vkDestroyDevice(device, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyInstance(instance, nullptr);
@@ -144,18 +171,18 @@ private:
         vkGetPhysicalDeviceFeatures(device, &deviceFeatures); // get advanced properties
 
         auto indices = findQueueFamilies(device);
-        return indices.isComplete() && checkDeviceExtensionSupport(device);
+        bool extensionsSupported = checkDeviceExtensionSupport(device);
+
+        // check if there is a swap chain which ensures all of the properties we want
+        bool swapChainAdequate = false;
+        if (extensionsSupported) {
+            SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+            swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+        }
+
+        return indices.isComplete() && checkDeviceExtensionSupport(device) && swapChainAdequate;
     }
 
-    // Struct which tells us if a GPU has both the graphic and presentation queues
-    struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily;
-        std::optional<uint32_t> presentFamily;
-
-        bool isComplete() {
-            return graphicsFamily.has_value() && presentFamily.has_value();
-        }
-    };
 
     // Checks if the argument device has both the graphic and presentation queues
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
@@ -274,6 +301,136 @@ private:
         if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("Failed to allocate command buffers!");
         }
+    }
+
+
+    // Returns a SwapChainSupportDetails struct holding the properies we want our swap chain to have
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
+        SwapChainSupportDetails details;
+
+        // query surface capabilities
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+        // now query supported surface formats
+        uint32_t formatCount;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+        if (formatCount != 0) {
+            details.formats.resize(formatCount);
+            vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+        }
+
+        // now query the presentation modes
+        uint32_t presentModeCount;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+        if (presentModeCount != 0) {
+            details.presentModes.resize(presentModeCount);
+            vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+        }
+
+        return details;
+    }
+
+
+    // Returns the optimal swap chain surface format among the formats supported by the swap chain
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+        for (const auto& availableFormat : availableFormats) {
+            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                return availableFormat;
+            }
+        }
+
+        return availableFormats[0]; // if the optimal surface format is not supported, just choose the first supported format
+    }
+
+    // Returns the optimal presentation mode supported by the swap chain
+    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+        for (const auto& availablePresentMode : availablePresentModes) {
+            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+                return availablePresentMode;
+            }
+        }
+
+        // if triple buffering is not available, settle with double buffering (which is guaranteed to be available)
+        return VK_PRESENT_MODE_FIFO_KHR;
+    }
+    
+    // Returns the optimal supported resolution of the images in the swap chain
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+        // if Vulkan set the resolution to maxInt, then it means we can choose the maximum resolution available; if not, we choose the dimensions of the window (in pixels) as resolution
+        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+            return capabilities.currentExtent;
+        }
+        else {
+            int width, height;
+            glfwGetFramebufferSize(window, &width, &height); // get the dimensions of the windows in pixels
+
+            VkExtent2D actualExtent = {
+                static_cast<uint32_t>(width),
+                static_cast<uint32_t>(height)
+            };
+
+            // clamp the resolution between the minimum and maximum allowed by the swap chain
+            actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+            actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+        
+            return actualExtent;
+        }
+    }
+
+
+    // Creates the swap chain
+    void createSwapChain() {
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice); // get what the swap chain supports
+
+        // choose the optimal supported settings for the swap chain
+        VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+        VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+        VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+
+        uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+        if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+            imageCount = swapChainSupport.capabilities.maxImageCount;
+        }
+
+        // now create the swap chain
+        VkSwapchainCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface = surface;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = surfaceFormat.format;
+        createInfo.imageColorSpace = surfaceFormat.colorSpace;
+        createInfo.imageExtent = extent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+        uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+        if (indices.graphicsFamily != indices.presentFamily) {
+            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            createInfo.queueFamilyIndexCount = 2; // how many queues share the images
+            createInfo.pQueueFamilyIndices = queueFamilyIndices; // which queues share the images
+        }
+        else {
+            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            createInfo.queueFamilyIndexCount = 0;
+            createInfo.pQueueFamilyIndices = nullptr;
+        }
+        createInfo.preTransform = swapChainSupport.capabilities.currentTransform; // no default transformation on images (e.g. rotate 90° clockwise)
+        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // do not blend with other windows in the OS
+        createInfo.presentMode = presentMode;
+        createInfo.clipped = VK_TRUE; // ignore pixels behind another window in the OS or outside the screen
+        createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+        if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create swap chain!");
+        }
+
+        // put the images of the swap chain into the class vector, so they are easier to find
+        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+        swapChainImages.resize(imageCount);
+        vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+
+        swapChainImageFormat = surfaceFormat.format; // save info about the format of the images in the swap chain
+        swapChainExtent = extent; // save info about the resolution of the images in the swap chain
     }
 };
 

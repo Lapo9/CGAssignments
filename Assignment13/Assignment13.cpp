@@ -42,7 +42,7 @@ private:
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // sets the window as a Vulkan window
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // window not resizable
 
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Assignment 12", nullptr, nullptr); // creates the window
+        window = glfwCreateWindow(WIDTH, HEIGHT, "Assignment 13", nullptr, nullptr); // creates the window
     }
 
     void initVulkan() {
