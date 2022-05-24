@@ -21,6 +21,11 @@
   <ItemGroup>
     <ClCompile Include="Assignment17.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="compile_shaders.bat" />
+    <None Include="shaders\BRDFShader.frag" />
+    <None Include="shaders\BRDFShader.vert" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
