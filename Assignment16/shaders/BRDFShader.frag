@@ -1,4 +1,5 @@
-#version 450#extension GL_ARB_separate_shader_objects : enable
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
 
 layout(location = 0) in vec3 fragPos;
 layout(location = 1) in vec3 fragNorm;
@@ -23,49 +24,50 @@ layout(binding = 2) uniform GlobalUniformBufferObject {
 
 /**** Modify from here *****/
 
-
+// vec3 L : light direction
+// vec3 N : normal vector
+// vec3 V : view direction
+// vec3 C : main color (diffuse color, or specular color)
 vec3 Lambert_Diffuse_BRDF(vec3 L, vec3 N, vec3 V, vec3 C) {
-	// Lambert Diffuse BRDF model
-	// in all BRDF parameters are:
-	// vec3 L : light direction
-	// vec3 N : normal vector
-	// vec3 V : view direction
-	// vec3 C : main color (diffuse color, or specular color)
-	
-	return C;
+	return C * max(dot(L, N), 0);
 }
 
+
+// float sigma : roughness of the material
 vec3 Oren_Nayar_Diffuse_BRDF(vec3 L, vec3 N, vec3 V, vec3 C, float sigma) {
-	// Directional light direction
-	// additional parameter:
-	// float sigma : roughness of the material
+	float sigmaI = acos(dot(L, N));
+	float sigmaR = acos(dot(V, N));
+	float alpha = max(sigmaI, sigmaR);
+	float beta = min(sigmaI, sigmaR);
+	float A = 1.0f - 0.5f * pow(sigma, 2) / (pow(sigma, 2) + 0.33f);
+	float B = 0.45f * pow(sigma, 2) / (pow(sigma, 2) + 0.09f);
+	vec3 vI = normalize(L - dot(L, N) * N);
+	vec3 vR = normalize(V - dot(V, N) * N);
+	float G = max(dot(vI, vR), 0.0f);
+	vec3 l = C * clamp(dot(L, N), 0.0f, 1.0f);
 
-	return C;
+	return l * (A + B * G * sin(alpha) * tan(beta));
 }
 
+
+// float gamma : exponent of the cosine term
 vec3 Phong_Specular_BRDF(vec3 L, vec3 N, vec3 V, vec3 C, float gamma)  {
-	// Phong Specular BRDF model
-	// additional parameter:
-	// float gamma : exponent of the cosine term
-	
-	return vec3(0,0,0);
+	return C * pow(clamp(dot(V, -reflect(L, N)), 0.0f, 1.0f), gamma);
 }
 
+
+// vec3 Cd : color to be used in dark areas
+// float thr : color threshold
 vec3 Toon_Diffuse_BRDF(vec3 L, vec3 N, vec3 V, vec3 C, vec3 Cd, float thr) {
-	// Toon Diffuse Brdf
-	// additional parameters:
-	// vec3 Cd : color to be used in dark areas
-	// float thr : color threshold
-	
-	return C;
+	float cosine = dot(L, N);
+	return cosine <= 0.0f ? vec3(0.0f, 0.0f, 0.0f) : cosine < thr ? Cd : C;
 }
 
-vec3 Toon_Specular_BRDF(vec3 L, vec3 N, vec3 V, vec3 C, float thr)  {
-	// Directional light direction
-	// additional parameter:
-	// float thr : color threshold
 
-	return vec3(0,0,0);
+// float thr : color threshold
+vec3 Toon_Specular_BRDF(vec3 L, vec3 N, vec3 V, vec3 C, float thr)  {
+	float cosine = dot(V, -reflect(L, N));
+	return cosine <= thr ? vec3(0.0f, 0.0f, 0.0f) : C;
 }
 
 

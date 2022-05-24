@@ -21,6 +21,10 @@
   <ItemGroup>
     <ClCompile Include="Assignment16.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="compile_shaders.bat" />
+    <None Include="shaders\BRDFShader.frag" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -162,6 +166,10 @@
       <AdditionalLibraryDirectories>P:\SDKs\graphics\glfw\glfw-3.3.6.bin.WIN64\lib-vc2022;P:\SDKs\VulkanSDK\1.3.204.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
