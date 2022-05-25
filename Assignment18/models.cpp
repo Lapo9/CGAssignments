@@ -1,6 +1,11 @@
 
 struct Vertex {
-	Vertex() = default;
+	Vertex() = default; // default ctor
+	Vertex(const Vertex&) = default; // default copy ctor
+	Vertex(Vertex&&) = default; // default move ctor
+	~Vertex() = default; // default dtor
+	Vertex& operator= (const Vertex&) = default; // default copy assignment
+	Vertex& operator= (Vertex&&) = default; // default move assignment
 
 	Vertex(glm::vec3 pos, glm::vec3 norm) {
 		this->pos = pos;
