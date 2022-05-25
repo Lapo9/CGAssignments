@@ -113,8 +113,22 @@ vec3 Ca : ambient color
 float gamma : Blinn exponent
 */
 vec3 Case3_Color(vec3 N, vec3 V, vec3 Cs, vec3 Ca, float gamma)  {
+	vec3[] lightDirs = vec3[](gubo.lightDir0, gubo.lightDir1, gubo.lightDir2, gubo.lightDir3);
+	vec3[] lightColors = vec3[](gubo.lightColor0, gubo.lightColor1, gubo.lightColor2, gubo.lightColor3);
+	vec3 reflectColor = vec3(0.0f, 0.0f, 0.0f);
+	for(int i = 0; i < lightDirs.length(); ++i) {
+		vec3 h = normalize(lightDirs[i] + V);
+		reflectColor += lightColors[i] * (Cs * pow(clamp(dot(N, h), 0.0f, 1.0f), gamma));
+	}
 	
-	return Ca;
+	vec3 lC = gubo.AmbColor;
+	vec3 lY = gubo.TopColor;
+	vec3 lX = gubo.DxColor;
+	vec3 lZ = gubo.DzColor;
+	vec3 lA = lC + N.x * lX + N.y * lY + N.z * lZ;
+	vec3 ambientColor = lA * Ca;
+	
+	return reflectColor + ambientColor;
 }
 
 
