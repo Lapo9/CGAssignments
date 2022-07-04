@@ -16,7 +16,7 @@
 const uint32_t WIDTH = 640;
 const uint32_t HEIGHT = 480;
 
-class Assignment13 {
+class Assignment14 {
 public:
     void run() {
         initWindow();
@@ -469,7 +469,7 @@ private:
 };
 
 int main() {
-    Assignment13 app;
+    Assignment14 app;
 
     try {
         app.run();
